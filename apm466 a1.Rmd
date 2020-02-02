@@ -1,0 +1,82 @@
+---
+title: "Untitled"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(jrvFinance)
+dates <- c("2020-01-02", "2020-01-03", "2020-01-06", "2020-01-07", "2020-01-08", "2020-01-09", "2020-01-10", "2020-01-13", "2020-01-14", "2020-01-15")
+mdates<- c("2020-03-01", "2020-09-01", "2021-03-01", "2021-09-01", "2022-03-01", "2022-06-01", "2023-03-01", "2023-06-01", "2024-03-01", "2024-09-01")
+coupons <- c(1.5e-2, 0.75e-2, 0.75e-2, 0.75e-2, 0.5e-2, 2.75e-2, 1.75e-2, 1.5e-2, 2.25e-2, 1.5e-2)
+price2 <- c(99.85, 99.26, 98.89, 98.41, 97.57, 102.53, 100.31, 99.48, 102.52, 98.72)
+price3 <- c(99.86, 99.28, 98.93, 98.45, 97.63, 102.59, 100.42, 99.59, 102.65, 98.95)
+price6 <- c(99.86, 99.28, 98.95, 98.49, 97.66, 102.62, 100.48, 99.65, 102.75, 99.29)
+price7 <- c(99.86, 99.27, 98.94, 98.46, 97.65, 102.59, 100.45, 99.61, 102.58, 99.11)
+price8 <- c(99.86, 99.28, 98.92, 98.46, 97.64, 102.58, 100.44, 99.62, 102.68, 99.25)
+price9 <- c(99.86, 99.28, 98.92, 98.43, 97.60, 102.52, 100.35, 99.54, 102.53, 98.99)
+price10 <- c(99.86, 99.28, 98.88, 98.43, 97.61, 102.52, 100.31, 99.53, 102.47, 99.03)
+price13 <- c(99.86, 99.27, 98.90, 98.38, 97.57, 102.46, 100.27, 99.44, 102.46, 99.06)
+price14 <- c(99.86, 99.28, 98.90, 98.41, 97.58, 102.47, 100.31, 99.49, 102.54, 98.99)
+price15 <- c(99.86, 99.30, 98.93, 98.42, 97.61, 102.51, 100.38, 99.56, 102.64, 99.10)
+pricelist <- list( price2, price3, price6, price7, price8, price8, price10, price13, price14, price15)
+```
+
+
+
+```{r}
+yieldcurves <- list()
+for(i in 1:10){
+  dailyyieldcurve = NULL
+  for(n in 1:10){
+    ytm <- bond.yield(settle = dates[i], mature = mdates[n], coupon = coupons[n], price = pricelist[[i]][n], redemption_value = 100 )
+    dailyyieldcurve <- append(dailyyieldcurve, ytm)
+  }
+  yieldcurves[[i]]<- dailyyieldcurve
+}
+t <-seq(0.5, 5, by=0.5)
+plot(t, yieldcurves[[1]], type="l", main = "daily yield curves", xlab ="years" ,ylab = "rates")
+for( i in 2:10){
+  lines(t, yieldcurves[[i]], type = "l", col = i)
+}
+legend("topright", legend = dates, col = 1:10, lty = 1, cex = 0.7)
+```
+
+
+
+```{r}
+dirtypricelist <- list()
+for(i in 1:10){
+  dirtyprices = NULL
+  for(n in 1:10){
+    ai <- bond.TCF(settle = dates[i], mature = mdates[n], coupon = coupon[n], redemption_value = 100)$accrued
+    dirtyprice <- pricelist[[i]][n] + ai
+    dirtyprices <- append( dirtyprices, dirtyprice)
+  }
+  dirtypricelist[[i]] <- dirtyprices
+}
+spotratelist <- list()
+for(i in 1:10){
+  spotrates  = NULL
+  for(n in 1:10){
+    if(n == 1){
+      spotrate <- -log(dirtypricelist[[i]][n]/(100 + 50 * coupons[n]))/yearFraction(dates[i], mdates[n])
+    }
+    else{
+      cashflow <- coupons[n]* exp(-spotrate* (yearFraction(dates[i], mdates[n])-0.5))
+      spotrate <- -log((dirtypricelist[[i]][n] -cashflow) / (100 + 50 * coupons[n])) / yearFraction(dates[i], mdates[n]) 
+    }
+    spotrates <- append(spotrates, spotrate)
+  }
+  spotratelist[[i]] <- spotrates
+}
+t <-seq(0.5, 5, by=0.5)
+plot(t, spotratelist[[1]], type="l", main = "daily spot curves", xlab ="years" ,ylab = "rates")
+for( i in 2:10){
+  lines(t, spotratelist[[i]], type = "l", col = i)
+}
+legend("topright", legend = dates, col = 1:10, lty = 1, cex = 0.7)
+```
